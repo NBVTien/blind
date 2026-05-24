@@ -3,6 +3,7 @@ import { MapsService } from './maps.service';
 import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateCellDto } from './dto/update-cell.dto';
 import { ToggleEdgeDto } from './dto/toggle-edge.dto';
+import { CreateTemplateDto } from './dto/create-template.dto';
 
 @Controller('maps')
 export class MapsController {
@@ -13,6 +14,18 @@ export class MapsController {
 
   @Post()
   create(@Body() dto: CreateMapDto) { return this.mapsService.create(dto); }
+
+  @Get('templates')
+  findAllTemplates() { return this.mapsService.findAllTemplates(); }
+
+  @Post('templates')
+  createTemplate(@Body() dto: CreateTemplateDto) { return this.mapsService.createTemplate(dto); }
+
+  @Delete('templates/:id')
+  removeTemplate(@Param('id') id: string) {
+    this.mapsService.removeTemplate(Number(id));
+    return { deleted: true };
+  }
 
   @Get(':id')
   findOne(@Param('id') id: string) { return this.mapsService.findOne(Number(id)); }

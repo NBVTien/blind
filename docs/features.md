@@ -10,14 +10,23 @@
 
 ### Map Generation (automatic on create)
 
-Four generation parameters (each 0–100) control output:
+Two creation modes:
+
+- **Empty map** — blank grid with no paths or special cells; GM draws everything manually
+- **Generated map** — algorithm creates paths, branches, and special cells from parameters
+
+Five generation parameters (each 0–100) control generated output:
 
 | Param | Effect |
 |-------|--------|
 | **Density** | Branch count (2–8) and branch depth (2–5). Low = sparse linear. High = dense tangled. |
 | **Chaos** | Goal-bias weight (5→1) and diagonal moves. `< 40` = cardinal only. `40–100` = diagonal paths unlock proportionally. |
+| **One-Way Roads** | Probability each undirected edge becomes one-directional. `0` = all bidirectional. `100` = mostly one-way. Jail cells always remain inward-only regardless. |
+| **Portals** | Non-adjacent wormhole connections. `0` = none. `100` = ~30% of path cells get a portal. Portals are always bidirectional. |
 | **Special Cells** | Type toggles (shop/trap/boss/loot/chance/jail) select which types appear. Rate slider (0–100) controls probability. |
 | **Connectivity** | Extra cross-edges between existing path cells (shortcuts). `0` = none, `100` = ~40% extra edges. |
+
+**Generation templates** — save the current parameter set as a named template; load a template to restore all sliders at once. Templates stored server-side, persist across sessions.
 
 Algorithm:
 1. All cells initialized as `plain`
@@ -26,7 +35,8 @@ Algorithm:
 4. Branch paths seeded from main path; count/depth driven by Density
 5. Connectivity extra edges randomly added between neighboring path cells
 6. Special cells assigned by rate probability; only enabled types used
-7. Edges built bidirectionally along all generated paths
+7. Edges built: each undirected pair → one-way (random direction) at probability `oneWayRate/100`; otherwise bidirectional. Jail cells always inward-only.
+8. Portal edges added between random non-adjacent path cell pairs; count scales with `portalRate`.
 
 ### Map Detail (`/maps/:id`)
 

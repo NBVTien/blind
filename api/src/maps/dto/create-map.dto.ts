@@ -53,4 +53,22 @@ export class CreateMapDto {
   /** if true, place start/end on random path cells instead of fixed corners */
   @IsOptional()
   randomStartEnd?: boolean;
+
+  /** 0–100: probability each edge becomes one-directional (0=all bidirectional, 100=mostly one-way) */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  oneWayRate?: number;
+
+  /** exact number of non-adjacent portal pairs to add (0=none, max 10) */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  portalCount?: number;
+
+  /** if true, create empty grid with no edges or special cells */
+  @IsOptional()
+  emptyMap?: boolean;
 }

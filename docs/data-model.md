@@ -36,7 +36,8 @@ All types live in `shared/src/index.ts` and are imported as `import type { ... }
 { from: string; to: string; }
 ```
 
-- Bidirectional: every connection stored as two edges (A→B and B→A)
+- Edges can be bidirectional (A→B and B→A) or one-directional (A→B only)
+- Generated maps use `oneWayRate` param to randomly make some edges one-way
 - Edges represent drawn paths, NOT full 8-directional adjacency
 - Movement validity checked by edge lookup
 - Edges can be diagonal (non-adjacent rows/cols) when generated with chaos ≥ 40 or added manually
@@ -51,6 +52,29 @@ All types live in `shared/src/index.ts` and are imported as `import type { ... }
   createdAt: string; // ISO
 }
 ```
+
+## MapTemplate
+
+```ts
+{
+  id: number;
+  name: string;
+  params: {
+    density?: number;
+    chaos?: number;
+    specialRate?: number;
+    connectivity?: number;
+    oneWayRate?: number;
+    portalRate?: number;
+    specialTypes?: string[];
+    randomStartEnd?: boolean;
+  };
+  createdAt: string; // ISO
+}
+```
+
+- Stores a named set of generation parameters for reuse on the create-map page.
+- Stored server-side in `map_templates` table.
 
 ## Item
 

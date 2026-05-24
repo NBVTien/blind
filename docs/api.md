@@ -12,6 +12,9 @@ All bodies are JSON. Global `ValidationPipe` (whitelist + transform).
 |--------|------|-------------|
 | GET | `/maps` | List all maps |
 | POST | `/maps` | Generate + save new map |
+| GET | `/maps/templates` | List all generation templates |
+| POST | `/maps/templates` | Create generation template |
+| DELETE | `/maps/templates/:id` | Delete generation template |
 | GET | `/maps/:id` | Get map by ID |
 | DELETE | `/maps/:id` | Delete map |
 | PATCH | `/maps/:id/cell/:cellId` | Update cell type/label |
@@ -23,14 +26,34 @@ All bodies are JSON. Global `ValidationPipe` (whitelist + transform).
   "name": "string",
   "gridW": 4–12,
   "gridH": 4–12,
+  "emptyMap": false,
   "density": 0–100,
   "chaos": 0–100,
   "specialRate": 0–100,
   "specialTypes": ["shop","trap","boss","loot","chance","jail"],
-  "connectivity": 0–100
+  "connectivity": 0–100,
+  "oneWayRate": 0–100,
+  "portalRate": 0–100,
+  "randomStartEnd": false
 }
 ```
-All gen params optional — defaults: density=40, chaos=30, specialRate=30, specialTypes=all, connectivity=20.
+All gen params optional — defaults: density=40, chaos=30, specialRate=30, specialTypes=all, connectivity=20, oneWayRate=0. Set `emptyMap: true` to skip generation and create a blank grid.
+
+**POST /maps/templates body:**
+```json
+{
+  "name": "string",
+  "density": 0–100,
+  "chaos": 0–100,
+  "specialRate": 0–100,
+  "connectivity": 0–100,
+  "oneWayRate": 0–100,
+  "portalRate": 0–100,
+  "specialTypes": ["shop","trap","boss","loot","chance","jail"],
+  "randomStartEnd": false
+}
+```
+All params optional. Returns `MapTemplate`: `{ id, name, params, createdAt }`.
 
 **PATCH /maps/:id/cell/:cellId body:**
 ```json

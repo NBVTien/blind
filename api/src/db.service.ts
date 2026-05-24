@@ -268,6 +268,15 @@ export class DbService implements OnModuleInit {
       );
     `);
 
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS map_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        params TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+    `);
+
     addColIfMissing('sessions', 'winner_id', 'TEXT');
     addColIfMissing('sessions', 'win_turn', 'INTEGER');
   }

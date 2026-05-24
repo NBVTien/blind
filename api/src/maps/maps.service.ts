@@ -5,6 +5,25 @@ import { DbService } from '../db.service';
 import { CreateMapDto } from './dto/create-map.dto';
 import { UpdateCellDto } from './dto/update-cell.dto';
 import { ToggleEdgeDto } from './dto/toggle-edge.dto';
+import { CreateTemplateDto } from './dto/create-template.dto';
+
+export interface MapTemplate {
+  id: number;
+  name: string;
+  params: {
+    density?: number;
+    chaos?: number;
+    specialRate?: number;
+    connectivity?: number;
+    oneWayRate?: number;
+    portalCount?: number;
+    specialTypes?: string[];
+    randomStartEnd?: boolean;
+  };
+  createdAt: string;
+}
+
+interface TemplateRow { id: number; name: string; params: string; created_at: string; }
 
 function cid(row: number, col: number) { return `r${row}c${col}`; }
 
@@ -111,10 +130,12 @@ interface GenOptions {
   specialTypes: SpecialCellType[]; // which special types to use
   connectivity: number;   // 0–100
   randomStartEnd?: boolean;
+  oneWayRate?: number;    // 0–100: probability each undirected edge becomes one-way
+  portalCount?: number;   // exact number of portal pairs to generate
 }
 
 function generateMap(name: string, gridW: number, gridH: number, opts: GenOptions): GameMap {
-  const { density, chaos, specialRate, specialTypes, connectivity, randomStartEnd } = opts;
+  const { density, chaos, specialRate, specialTypes, connectivity, randomStartEnd, oneWayRate = 0, portalCount = 0 } = opts;
 
   const cellMap = new Map<string, Cell>();
   for (let r = 0; r < gridH; r++)
@@ -233,6 +254,7 @@ function generateMap(name: string, gridW: number, gridH: number, opts: GenOption
 
   const cells = Array.from(cellMap.values());
   const edges: Edge[] = [];
+  const oneWayProb = oneWayRate / 100;
   for (const pair of edgePairs) {
     const [a, b] = pair.split('|');
     const ca = cellMap.get(a)!;
@@ -240,8 +262,44 @@ function generateMap(name: string, gridW: number, gridH: number, opts: GenOption
     const abSrc = srcHandle(ca, cb);
     const baSrc = srcHandle(cb, ca);
     // jail cells are inward-only: only add the edge that enters jail, never the one that exits
-    if (ca.type !== 'jail') edges.push({ from: a, to: b, exitHandle: abSrc, entryHandle: SRC_TO_TGT[baSrc] });
-    if (cb.type !== 'jail') edges.push({ from: b, to: a, exitHandle: baSrc, entryHandle: SRC_TO_TGT[abSrc] });
+    const aIsJail = ca.type === 'jail';
+    const bIsJail = cb.type === 'jail';
+    // one-way: randomly pick direction; jail overrides (always inward-only)
+    const makeOneWay = !aIsJail && !bIsJail && Math.random() < oneWayProb;
+    if (makeOneWay) {
+      // randomly pick one direction
+      if (Math.random() < 0.5) {
+        edges.push({ from: a, to: b, exitHandle: abSrc, entryHandle: SRC_TO_TGT[baSrc] });
+      } else {
+        edges.push({ from: b, to: a, exitHandle: baSrc, entryHandle: SRC_TO_TGT[abSrc] });
+      }
+    } else {
+      if (!aIsJail) edges.push({ from: a, to: b, exitHandle: abSrc, entryHandle: SRC_TO_TGT[baSrc] });
+      if (!bIsJail) edges.push({ from: b, to: a, exitHandle: baSrc, entryHandle: SRC_TO_TGT[abSrc] });
+    }
+  }
+
+  // portals: non-adjacent wormholes; portalCount = exact number of pairs to add
+  if (portalCount > 0) {
+    const cellsArr = Array.from(cellMap.values());
+    for (let p = 0; p < portalCount * 5 && edges.filter(e => e.portal).length / 2 < portalCount; p++) {
+      const aId = pathList[Math.floor(Math.random() * pathList.length)];
+      const bId = pathList[Math.floor(Math.random() * pathList.length)];
+      if (aId === bId) continue;
+      const ca2 = cellMap.get(aId)!;
+      const cb2 = cellMap.get(bId)!;
+      if (isAdjacent(ca2, cb2)) continue;
+      // skip if portal already exists between this pair
+      if (edges.some(e => e.portal && ((e.from === aId && e.to === bId) || (e.from === bId && e.to === aId)))) continue;
+      const resolved = resolveEdge(ca2, cb2, edges, cellsArr);
+      if (!resolved || !resolved.portal) continue;
+      // portals are always bidirectional: add both directions sharing same face pair
+      edges.push({ from: aId, to: bId, portal: true, exitHandle: resolved.exitHandle, entryHandle: resolved.entryHandle });
+      const revResolved = resolveEdge(cb2, ca2, edges, cellsArr);
+      if (revResolved && revResolved.portal) {
+        edges.push({ from: bId, to: aId, portal: true, exitHandle: revResolved.exitHandle, entryHandle: revResolved.entryHandle });
+      }
+    }
   }
 
   return { id: 0, name, gridW, gridH, cells, edges, createdAt: new Date().toISOString() };
@@ -283,15 +341,26 @@ export class MapsService implements OnModuleInit {
   }
 
   create(dto: CreateMapDto): GameMap {
-    const opts: GenOptions = {
-      density: dto.density ?? 40,
-      chaos: dto.chaos ?? 30,
-      specialRate: dto.specialRate ?? 30,
-      specialTypes: dto.specialTypes ? (dto.specialTypes as SpecialCellType[]) : SPECIAL_CELL_TYPES,
-      connectivity: dto.connectivity ?? 20,
-      randomStartEnd: dto.randomStartEnd ?? false,
-    };
-    const m = generateMap(dto.name, dto.gridW, dto.gridH, opts);
+    let m: GameMap;
+    if (dto.emptyMap) {
+      const cells: Cell[] = [];
+      for (let r = 0; r < dto.gridH; r++)
+        for (let c = 0; c < dto.gridW; c++)
+          cells.push({ id: `r${r}c${c}`, row: r, col: c, type: 'plain' });
+      m = { id: 0, name: dto.name, gridW: dto.gridW, gridH: dto.gridH, cells, edges: [], createdAt: new Date().toISOString() };
+    } else {
+      const opts: GenOptions = {
+        density: dto.density ?? 40,
+        chaos: dto.chaos ?? 30,
+        specialRate: dto.specialRate ?? 30,
+        specialTypes: dto.specialTypes ? (dto.specialTypes as SpecialCellType[]) : SPECIAL_CELL_TYPES,
+        connectivity: dto.connectivity ?? 20,
+        randomStartEnd: dto.randomStartEnd ?? false,
+        oneWayRate: dto.oneWayRate ?? 0,
+        portalCount: dto.portalCount ?? 0,
+      };
+      m = generateMap(dto.name, dto.gridW, dto.gridH, opts);
+    }
     const result = this.db.db.prepare('INSERT INTO maps (name, grid_w, grid_h, cells, edges, created_at) VALUES (?, ?, ?, ?, ?, ?)')
       .run(m.name, m.gridW, m.gridH, JSON.stringify(m.cells), JSON.stringify(m.edges), m.createdAt);
     return this.findOne(Number(result.lastInsertRowid));
@@ -323,6 +392,38 @@ export class MapsService implements OnModuleInit {
     }
     return map;
   }
+
+  // ── Templates ────────────────────────────────────────────────────────
+
+  findAllTemplates(): MapTemplate[] {
+    return (this.db.db.prepare('SELECT * FROM map_templates ORDER BY created_at DESC').all() as TemplateRow[])
+      .map(r => ({ id: r.id, name: r.name, params: JSON.parse(r.params), createdAt: r.created_at }));
+  }
+
+  createTemplate(dto: CreateTemplateDto): MapTemplate {
+    const params = {
+      density: dto.density,
+      chaos: dto.chaos,
+      specialRate: dto.specialRate,
+      connectivity: dto.connectivity,
+      oneWayRate: dto.oneWayRate,
+      portalCount: dto.portalCount,
+      specialTypes: dto.specialTypes,
+      randomStartEnd: dto.randomStartEnd,
+    };
+    const createdAt = new Date().toISOString();
+    const result = this.db.db.prepare('INSERT INTO map_templates (name, params, created_at) VALUES (?, ?, ?)')
+      .run(dto.name, JSON.stringify(params), createdAt);
+    return { id: Number(result.lastInsertRowid), name: dto.name, params, createdAt };
+  }
+
+  removeTemplate(id: number): void {
+    const row = this.db.db.prepare('SELECT id FROM map_templates WHERE id = ?').get(id);
+    if (!row) throw new NotFoundException(`Template ${id} not found`);
+    this.db.db.prepare('DELETE FROM map_templates WHERE id = ?').run(id);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
 
   toggleEdge(mapId: number, dto: ToggleEdgeDto): GameMap {
     const map = this.findOne(mapId);
