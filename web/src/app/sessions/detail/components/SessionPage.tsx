@@ -136,7 +136,7 @@ export function SessionPage() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row overflow-hidden" style={{ height: 'calc(100vh - var(--sidebar-header-h))' }}>
+    <div className="flex flex-col lg:flex-row overflow-hidden h-screen">
       {/* Left: Map panel */}
       <div className="lg:flex-[65] border-b lg:border-b-0 lg:border-r border-border flex flex-col min-h-0 p-4 pb-0 h-[45vh] lg:h-auto">
         <div className="flex items-center gap-3 mb-4">
