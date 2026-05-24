@@ -7,6 +7,8 @@ export interface MapTemplate {
   id: number
   name: string
   params: {
+    gridW?: number
+    gridH?: number
     density?: number
     chaos?: number
     specialRate?: number

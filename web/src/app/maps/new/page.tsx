@@ -100,13 +100,15 @@ export function NewMapPage() {
   function handleSaveTemplate() {
     if (!templateName.trim()) return
     createTemplate.mutate(
-      { name: templateName.trim(), params: { density, chaos, specialRate, connectivity, oneWayRate, portalCount, specialTypes, randomStartEnd } },
+      { name: templateName.trim(), params: { gridW: Number(gridW), gridH: Number(gridH), density, chaos, specialRate, connectivity, oneWayRate, portalCount, specialTypes, randomStartEnd } },
       { onSuccess: () => { setTemplateName(''); setShowSaveTemplate(false) } },
     )
   }
 
   function handleLoadTemplate(t: typeof templates[0]) {
     const p = t.params
+    if (p.gridW !== undefined) setGridW(String(p.gridW))
+    if (p.gridH !== undefined) setGridH(String(p.gridH))
     if (p.density !== undefined) setDensity(p.density)
     if (p.chaos !== undefined) setChaos(p.chaos)
     if (p.specialRate !== undefined) setSpecialRate(p.specialRate)

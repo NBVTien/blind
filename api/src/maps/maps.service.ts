@@ -11,6 +11,8 @@ export interface MapTemplate {
   id: number;
   name: string;
   params: {
+    gridW?: number;
+    gridH?: number;
     density?: number;
     chaos?: number;
     specialRate?: number;
@@ -402,6 +404,8 @@ export class MapsService implements OnModuleInit {
 
   createTemplate(dto: CreateTemplateDto): MapTemplate {
     const params = {
+      gridW: dto.gridW,
+      gridH: dto.gridH,
       density: dto.density,
       chaos: dto.chaos,
       specialRate: dto.specialRate,

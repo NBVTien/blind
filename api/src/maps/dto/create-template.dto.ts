@@ -8,6 +8,18 @@ export class CreateTemplateDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(4)
+  @Max(12)
+  gridW?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(4)
+  @Max(12)
+  gridH?: number;
+
+  @IsOptional()
+  @IsNumber()
   @Min(0)
   @Max(100)
   density?: number;
