@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"/Users/vuongtiennguyenbui/indie/apps/blind/.claude/hooks/read-docs.sh\"",
+            "timeout": 10,
+            "statusMessage": "Loading blind-game docs..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"/Users/vuongtiennguyenbui/indie/apps/blind/.claude/hooks/post-edit-docs-reminder.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

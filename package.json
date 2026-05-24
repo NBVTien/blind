@@ -1,0 +1,12 @@
+{
+  "name": "@blind/root",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --prefix-colors \"cyan,magenta\" -n \"api,web\" \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev"
+  },
+  "devDependencies": {
+    "concurrently": "latest"
+  }
+}
