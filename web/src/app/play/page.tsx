@@ -1,10 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { Sun, Moon } from 'lucide-react'
 import { useSessionByCode } from '@/lib/sessions.queries'
+import { useTheme } from '@/hooks/use-theme'
 
 export function PlayerPickerPage() {
   const { code = '' } = useParams<{ code: string }>()
   const navigate = useNavigate()
   const { data: session, isLoading, isError } = useSessionByCode(code)
+  const { theme, toggle: toggleTheme } = useTheme()
 
   if (isLoading) {
     return (
@@ -24,6 +27,12 @@ export function PlayerPickerPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+      >
+        {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+      </button>
       {/* Header */}
       <div className="mb-10 text-center">
         <h1 className="font-display text-6xl tracking-widest uppercase text-primary mb-2">

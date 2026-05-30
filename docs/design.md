@@ -11,18 +11,18 @@ The physical scene: a GM running a live session on a laptop in a dim room, playe
 ## Fonts
 
 - **Display (headings, titles):** `Cormorant Garamond` — italic-capable old-style serif. Weights 300/400/600/700. Used for h1–h6 and `.font-display`. Large display sizes use `font-light` (300); labels use default weight.
-- **Body:** `Crimson Text` — Old-book serif. All body text, labels, UI copy.
+- **Body:** `Vollkorn` — warm old-style serif designed for screen reading. Moderate stroke contrast, round proportions, robust at small sizes on dark backgrounds. Weights 400/600/700 + italic 400. All body text, labels, UI copy.
 
 Both loaded from Google Fonts in `index.css` (must be the first `@import`).
 
 **Typographic rhythm:**
 - Page titles: Cormorant Garamond `text-3xl font-light tracking-wide` (display register)
 - Section heads: Cormorant Garamond `text-xl font-semibold tracking-wider uppercase` (label register)
-- Body / UI copy: Crimson Text `text-base`
-- Tabular data (gold, HP numbers): Crimson Text `text-sm tabular-nums`
-- Status/badge text: Crimson Text `text-xs tracking-widest uppercase`
+- Body / UI copy: Vollkorn `text-base`
+- Tabular data (gold, HP numbers): Vollkorn `text-sm tabular-nums`
+- Status/badge text: Vollkorn `text-xs tracking-widest uppercase`
 
-Never mix font families within a hierarchy tier. Cormorant for structure; Crimson for content.
+Never mix font families within a hierarchy tier. Cormorant for structure; Vollkorn for content.
 
 ## Theme
 

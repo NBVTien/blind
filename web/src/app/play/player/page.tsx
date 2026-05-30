@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Heart, Coins, ShoppingBag, Swords, RefreshCw, MapPin, ArrowLeft, SkipForward, X, Trophy } from 'lucide-react'
+import { Heart, Coins, ShoppingBag, Swords, RefreshCw, MapPin, ArrowLeft, SkipForward, X, Trophy, Sun, Moon } from 'lucide-react'
+import { useTheme } from '@/hooks/use-theme'
 import { useSessionByCode, useEndTurn } from '@/lib/sessions.queries'
 import { useMap } from '@/lib/maps.queries'
 import { useItems } from '@/lib/items.queries'
@@ -122,6 +123,8 @@ export function PlayerViewPage() {
   const items = shopItemIds != null ? allItems.filter(i => shopItemIds.includes(i.id)) : allItems
   const playerAction = usePlayerAction(session?.id ?? 0)
   const endTurn = useEndTurn(session?.id ?? 0)
+
+  const { theme, toggle: toggleTheme } = useTheme()
 
   const [spinResult, setSpinResult] = useState<{ entry: WheelEntry; label: string } | null>(null)
   const [bossFight, setBossFight] = useState<BossFightSpinResult | null>(null)
@@ -277,10 +280,18 @@ export function PlayerViewPage() {
       {/* ── Top bar ─────────────────────────────────────────── */}
       <header className="px-5 py-3 border-b border-border flex items-center justify-between gap-4 shrink-0">
         <span className="font-display text-lg tracking-widest text-primary uppercase">BLIND</span>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground tracking-widest uppercase">
-          <span>{session.name}</span>
-          <span className="opacity-30">·</span>
-          <span>T{session.currentTurn}</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground tracking-widest uppercase">
+            <span>{session.name}</span>
+            <span className="opacity-30">·</span>
+            <span>T{session.currentTurn}</span>
+          </div>
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
         </div>
       </header>
 
