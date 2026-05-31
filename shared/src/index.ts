@@ -149,11 +149,14 @@ export type ActionType =
   | 'RESET_MOVE'
   | 'NOTIFY_GM'
   | 'DISTANCE_TO_END'
+  | 'REVEAL_ADJACENT'
   | 'BROADCAST'
   | 'END_TURN'
   | 'SKIP_TURN'
   | 'REORDER_PLAYERS'
-  | 'COMPLETE_SESSION';
+  | 'COMPLETE_SESSION'
+  | 'ADD_PLAYER'
+  | 'CLEAR_SKIP';
 
 export interface GmActionPayload {
   playerId?: string;
@@ -173,6 +176,9 @@ export interface GmActionPayload {
   playerOrder?: string[];
   /** COMPLETE_SESSION: optional winner player ID */
   winnerId?: string;
+  /** ADD_PLAYER */
+  playerName?: string;
+  playerColor?: string;
 }
 
 export interface BossFightSpinResult {
@@ -214,6 +220,7 @@ export interface GmActionResult {
   triggeredAction?: AttachedAction;
   bossFight?: BossFightSpinResult;
   distanceToEnd?: number | null;
+  adjacentCells?: { cellId: string; type: string; label: string; direction: string }[];
 }
 
 export type PlayerActionType =
@@ -238,4 +245,5 @@ export interface PlayerActionResult {
   bossFight?: BossFightSpinResult;
   passiveEvent?: { type: 'trap' | 'loot'; goldDelta: number };
   distanceToEnd?: number | null;
+  adjacentCells?: { cellId: string; type: string; label: string; direction: string }[];
 }

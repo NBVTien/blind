@@ -378,7 +378,9 @@ export function SessionPage() {
               }}
               onEndTurn={(playerId) => endTurn.mutate(playerId)}
               onSkipTurn={(playerId) => mapGmAction.mutate({ type: 'SKIP_TURN', payload: { playerId } })}
+              onClearSkip={(playerId) => mapGmAction.mutate({ type: 'CLEAR_SKIP', payload: { playerId } })}
               onReorder={(playerOrder) => mapGmAction.mutate({ type: 'REORDER_PLAYERS', payload: { playerOrder } })}
+              onAddPlayer={(name, color) => mapGmAction.mutate({ type: 'ADD_PLAYER', payload: { playerName: name, playerColor: color } })}
             />
           )}
           {activeTab === 'log' && (

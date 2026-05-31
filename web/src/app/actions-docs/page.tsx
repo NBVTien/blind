@@ -164,6 +164,12 @@ export function ActionsDocsPage() {
           notes="BFS from player's current cell to nearest end cell. Logs result and returns distanceToEnd in response. Used by Oracle's Eye item. Returns null if no path exists."
         />
         <ActionRow
+          name="Reveal Adjacent"
+          type="REVEAL_ADJACENT"
+          payload="playerId"
+          notes="Returns the cell type and label of every cell reachable from the player's current position via outgoing edges. Logs the result. Used by Scout's Map item. Result shown as colored pills in the player view."
+        />
+        <ActionRow
           name="Notify GM"
           type="NOTIFY_GM"
           payload="playerId, message?"

@@ -105,6 +105,6 @@ export function useSessionPolling(id: number) {
     queryKey: queryKeys.session(id),
     queryFn: () => api.get(`/api/sessions/${id}`).then(r => r.data),
     enabled: !!id,
-    refetchInterval: 3000,
+    refetchInterval: 1500,
   })
 }

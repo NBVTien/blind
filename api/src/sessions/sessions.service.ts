@@ -294,8 +294,8 @@ export class SessionsService {
     const gameConfig = this.gameConfigService.get();
     const effectiveActions: AttachedAction[] =
       destCell.actions?.length ? destCell.actions
-      : destCell.type === 'trap' ? [{ type: 'TAKE_GOLD', payload: { amount: 10 } }]
-      : destCell.type === 'loot' ? [{ type: 'GIVE_GOLD', payload: { amount: 10 } }]
+      : destCell.type === 'trap' ? (gameConfig.cellConfig?.trap?.defaultActions ?? [{ type: 'TAKE_GOLD', payload: { amount: 10 } }])
+      : destCell.type === 'loot' ? (gameConfig.cellConfig?.loot?.defaultActions ?? [{ type: 'GIVE_GOLD', payload: { amount: 10 } }])
       : destCell.type === 'start' ? (gameConfig.cellConfig?.start?.defaultActions ?? [])
       : [];
     if (effectiveActions.length) {
@@ -631,6 +631,44 @@ export class SessionsService {
         return { session: this.save(session), distanceToEnd: dist };
       }
 
+      case 'REVEAL_ADJACENT': {
+        const session = this.findOne(sessionId);
+        const player = session.players.find(p => p.id === payload.playerId);
+        if (!player) throw new NotFoundException(`Player ${payload.playerId} not found`);
+        const map = this.mapsService.findOne(session.mapId);
+        const fromCell = (map.cells as Cell[]).find(c => c.id === player.currentCellId);
+        const handleToDir: Record<string, string> = {
+          st: 'N', str: 'NE', sr: 'E', sbr: 'SE',
+          sb: 'S', sbl: 'SW', sl: 'W', stl: 'NW',
+        };
+        function dirFromHandleOrCoords(h: string | undefined, from: Cell, to: Cell): string {
+          if (h && handleToDir[h]) return handleToDir[h];
+          const dr = to.row - from.row, dc = to.col - from.col;
+          if (dr < 0 && dc === 0) return 'N';
+          if (dr < 0 && dc > 0)  return 'NE';
+          if (dr === 0 && dc > 0) return 'E';
+          if (dr > 0 && dc > 0)  return 'SE';
+          if (dr > 0 && dc === 0) return 'S';
+          if (dr > 0 && dc < 0)  return 'SW';
+          if (dr === 0 && dc < 0) return 'W';
+          return 'NW';
+        }
+        const adjacentEdges = (map.edges as Edge[]).filter(e => e.from === player.currentCellId);
+        const seen = new Set<string>();
+        const adjacentCells = adjacentEdges.reduce<{ cellId: string; type: string; label: string; direction: string }[]>((acc, edge) => {
+          if (seen.has(edge.to)) return acc;
+          seen.add(edge.to);
+          const toCell = (map.cells as Cell[]).find(c => c.id === edge.to);
+          if (!toCell || !fromCell) return acc;
+          const direction = dirFromHandleOrCoords(edge.exitHandle, fromCell, toCell);
+          acc.push({ cellId: toCell.id, type: toCell.type, label: toCell.label ?? toCell.type, direction });
+          return acc;
+        }, []);
+        const typeList = adjacentCells.map(c => `${c.direction}: ${c.type}`).join(', ') || 'none';
+        session.log.unshift({ id: nextLogId(), turn: session.currentTurn, playerId: player.id, playerName: player.name, action: `[Scout's Map] revealed adjacent cells: ${typeList}`, timestamp: new Date().toISOString() });
+        return { session: this.save(session), adjacentCells };
+      }
+
       case 'BROADCAST': {
         const session = this.findOne(sessionId);
         const broadcast: PlayerBroadcast = {
@@ -681,6 +719,36 @@ export class SessionsService {
         } else {
           session.log.unshift({ id: nextLogId(), turn: session.currentTurn, playerId: '', playerName: 'GM', action: `GM ended the session`, timestamp: new Date().toISOString() });
         }
+        return { session: this.save(session) };
+      }
+
+      case 'ADD_PLAYER': {
+        const session = this.findOne(sessionId);
+        if (!payload.playerName?.trim()) throw new BadRequestException('playerName required');
+        const map = this.mapsService.findOne(session.mapId);
+        const startCell = map.cells.find((c: Cell) => c.type === 'start') ?? map.cells[0];
+        const newPlayer: Player = {
+          id: nextPlayerId(),
+          name: payload.playerName.trim(),
+          gold: 30, hp: 3, maxHp: 3,
+          currentCellId: startCell.id,
+          inventory: [],
+          color: payload.playerColor ?? '#888888',
+          skippedTurnsRemaining: 0, deathCount: 0,
+        };
+        session.players.push(newPlayer);
+        session.turnOrder.push(newPlayer.id);
+        if (!session.activePlayerId) session.activePlayerId = newPlayer.id;
+        session.log.unshift({ id: nextLogId(), turn: session.currentTurn, playerId: newPlayer.id, playerName: newPlayer.name, action: `joined the session`, timestamp: new Date().toISOString() });
+        return { session: this.save(session) };
+      }
+
+      case 'CLEAR_SKIP': {
+        const session = this.findOne(sessionId);
+        const player = session.players.find(p => p.id === payload.playerId);
+        if (!player) throw new NotFoundException(`Player ${payload.playerId} not found`);
+        player.skippedTurnsRemaining = 0;
+        session.log.unshift({ id: nextLogId(), turn: session.currentTurn, playerId: player.id, playerName: player.name, action: `GM cleared skip penalty`, timestamp: new Date().toISOString() });
         return { session: this.save(session) };
       }
 
@@ -747,7 +815,7 @@ export class SessionsService {
           throw new BadRequestException('Body Snatcher requires a target player');
         }
         const result = this.executeAction(sessionId, 'USE_ITEM', { playerId: payload.playerId, itemId: payload.itemId, targetPlayerId: payload.targetPlayerId });
-        return { session: result.session!, ...(result.distanceToEnd !== undefined ? { distanceToEnd: result.distanceToEnd } : {}) };
+        return { session: result.session!, ...(result.distanceToEnd !== undefined ? { distanceToEnd: result.distanceToEnd } : {}), ...(result.adjacentCells ? { adjacentCells: result.adjacentCells } : {}) };
       }
 
       case 'PLAYER_SPIN_CHANCE': {
@@ -790,7 +858,21 @@ export class SessionsService {
         const spunEntry = this.wheelsService.spin(jailWheelId);
         const label = (spunEntry.label ?? '').toLowerCase();
         const escaped = label.includes('escape') || label.includes('free') || label.includes('out');
-        if (escaped) {
+        const toStart = label.includes('start');
+        if (toStart) {
+          const startCell = map.cells.find((c: Cell) => c.type === 'start');
+          if (!startCell) throw new BadRequestException('No start cell on map');
+          const from = player.currentCellId;
+          player.currentCellId = startCell.id;
+          player.hasMoved = true;
+          session.log.unshift({ id: nextLogId(), turn: session.currentTurn, playerId: player.id, playerName: player.name, action: `jail wheel — teleported to start (from ${from})`, timestamp: new Date().toISOString() });
+          const savedToStart = this.save(session);
+          if (spunEntry.actions?.length) {
+            const actionResult = this.executeActions(sessionId, spunEntry.actions, player.id);
+            return { session: actionResult.session ?? savedToStart, spunEntry };
+          }
+          return { session: savedToStart, spunEntry };
+        } else if (escaped) {
           const adjacentIds = (map.edges as Edge[])
             .filter(e => e.from === player.currentCellId)
             .map(e => e.to);
@@ -819,7 +901,12 @@ export class SessionsService {
       }
 
       case 'PLAYER_END_TURN': {
-        if (!player.hasMoved) throw new BadRequestException('You must move before ending your turn');
+        const isSkipping = (player.skippedTurnsRemaining ?? 0) > 0;
+        const map = this.mapsService.findOne(session.mapId);
+        const currentCell = map?.cells.find((c: Cell) => c.id === player.currentCellId);
+        const onNoMoveCell = currentCell?.type === 'jail' || currentCell?.type === 'boss';
+        if (!player.hasMoved && !isSkipping && !onNoMoveCell)
+          throw new BadRequestException('You must move before ending your turn');
         return { session: this.endTurn(sessionId, payload.playerId) };
       }
 

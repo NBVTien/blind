@@ -35,6 +35,7 @@ const ACTION_TYPES: { value: ActionType; label: string }[] = [
   { value: 'BOSS_FIGHT_SPIN', label: 'Boss Fight Spin' },
   { value: 'SPIN_WHEEL', label: 'Spin Wheel' },
   { value: 'DISTANCE_TO_END', label: 'Distance to End' },
+  { value: 'REVEAL_ADJACENT', label: 'Reveal Adjacent' },
   { value: 'NOTIFY_GM', label: 'Notify GM' },
   { value: 'BROADCAST', label: 'Broadcast' },
   { value: 'END_TURN', label: 'End Turn' },
@@ -366,6 +367,7 @@ export function actionLabel(actions: AttachedAction | AttachedAction[]): string 
       case 'RESET_MOVE': return `Reset move`
       case 'STEAL_GOLD': return `Steal ${p.amount ?? '?'}g`
       case 'DISTANCE_TO_END': return `Distance to end`
+      case 'REVEAL_ADJACENT': return `Reveal adjacent`
       case 'NOTIFY_GM': return p.message ? `Notify GM: ${p.message}` : `Notify GM`
       case 'BROADCAST': return p.broadcastMessage ? `Broadcast: ${p.broadcastMessage}` : `Broadcast`
       case 'END_TURN': return `End turn`

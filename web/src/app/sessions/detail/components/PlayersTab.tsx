@@ -1,4 +1,5 @@
-import { Coins, Lock, GripVertical, Heart, SkipForward, MapPin } from 'lucide-react'
+import { useState } from 'react'
+import { Coins, Lock, GripVertical, Heart, SkipForward, MapPin, UserPlus } from 'lucide-react'
 import {
   DndContext,
   closestCenter,
@@ -55,6 +56,7 @@ function SortablePlayerRow({
   onOpenWheelOverlay,
   onEndTurn,
   onSkipTurn,
+  onClearSkip,
 }: {
   player: Player
   session: Session
@@ -69,6 +71,7 @@ function SortablePlayerRow({
   onOpenWheelOverlay: (wheel: Wheel, opts?: { wheelId?: number; playerId?: string; isBoss?: boolean }) => void
   onEndTurn: (playerId: string) => void
   onSkipTurn: (playerId: string) => void
+  onClearSkip: (playerId: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: player.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -112,7 +115,13 @@ function SortablePlayerRow({
           {/* Status badges */}
           <div className="flex items-center gap-1.5">
             {isSkipping && (
-              <span className="text-[9px] font-display tracking-widest text-accent border border-accent/40 rounded px-1.5 py-0.5 leading-none">SKIP ×{player.skippedTurnsRemaining}</span>
+              <button
+                onClick={() => onClearSkip(player.id)}
+                title="Clear skip penalty"
+                className="text-[9px] font-display tracking-widest text-accent border border-accent/40 rounded px-1.5 py-0.5 leading-none hover:bg-accent/10 transition-colors"
+              >
+                SKIP ×{player.skippedTurnsRemaining}
+              </button>
             )}
             {isActive && (
               <span className="text-[9px] font-display tracking-widest text-primary border border-primary/50 rounded px-1.5 py-0.5 leading-none bg-primary/10">ACTIVE</span>
@@ -244,6 +253,83 @@ function SortablePlayerRow({
   )
 }
 
+const PRESET_COLORS = ['#e05252', '#e09a52', '#d4c94a', '#52c97a', '#527fe0', '#a552e0', '#e052b8', '#52d4d4']
+
+function AddPlayerRow({ onAdd }: { onAdd: (name: string, color: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [color, setColor] = useState(PRESET_COLORS[0])
+
+  function submit() {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    onAdd(trimmed, color)
+    setName('')
+    setColor(PRESET_COLORS[0])
+    setOpen(false)
+  }
+
+  if (!open) {
+    return (
+      <div className="border-t border-border/40 mx-4">
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 w-full px-4 py-3 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        >
+          <UserPlus className="w-3.5 h-3.5" />
+          Add player
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="border-t border-border/40 mx-4">
+      <div className="px-4 py-3 flex flex-col gap-3">
+        <p className="text-[10px] tracking-widest uppercase text-muted-foreground/50">New Player</p>
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setOpen(false) }}
+            placeholder="Name"
+            className="flex-1 bg-input border border-border rounded-md px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-ring"
+          />
+          <button
+            onClick={submit}
+            disabled={!name.trim()}
+            className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-medium disabled:opacity-40"
+          >
+            Add
+          </button>
+          <button
+            onClick={() => setOpen(false)}
+            className="px-3 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {PRESET_COLORS.map(c => (
+            <button
+              key={c}
+              onClick={() => setColor(c)}
+              className="w-6 h-6 rounded-full transition-transform"
+              style={{
+                background: c,
+                outline: color === c ? `2px solid ${c}` : 'none',
+                outlineOffset: 2,
+                transform: color === c ? 'scale(1.2)' : 'scale(1)',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PlayersTab({
   session,
   map,
@@ -257,7 +343,9 @@ export function PlayersTab({
   onOpenWheelOverlay,
   onEndTurn,
   onSkipTurn,
+  onClearSkip,
   onReorder,
+  onAddPlayer,
 }: {
   session: Session
   map: GameMap
@@ -271,9 +359,11 @@ export function PlayersTab({
   onOpenWheelOverlay: (wheel: Wheel, opts?: { wheelId?: number; playerId?: string; isBoss?: boolean }) => void
   onEndTurn: (playerId: string) => void
   onSkipTurn: (playerId: string) => void
+  onClearSkip: (playerId: string) => void
   onReorder: (playerOrder: string[]) => void
+  onAddPlayer: (name: string, color: string) => void
 }) {
-  const sensors = useSensors(useSensor(PointerSensor))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -285,29 +375,33 @@ export function PlayersTab({
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={session.players.map(p => p.id)} strategy={verticalListSortingStrategy}>
-        {session.players.map((player, idx) => (
-          <div key={player.id}>
-            {idx > 0 && <div className="border-t border-border/40 mx-4" />}
-            <SortablePlayerRow
-              player={player}
-              session={session}
-              map={map}
-              wheels={wheels}
-              cellConfig={cellConfig}
-              selectedPlayerId={selectedPlayerId}
-              onSelectPlayer={onSelectPlayer}
-              onAdjustGold={onAdjustGold}
-              onSetHp={onSetHp}
-              onAdjustMaxHp={onAdjustMaxHp}
-              onOpenWheelOverlay={onOpenWheelOverlay}
-              onEndTurn={onEndTurn}
-              onSkipTurn={onSkipTurn}
-            />
-          </div>
-        ))}
-      </SortableContext>
-    </DndContext>
+    <>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={session.players.map(p => p.id)} strategy={verticalListSortingStrategy}>
+          {session.players.map((player, idx) => (
+            <div key={player.id}>
+              {idx > 0 && <div className="border-t border-border/40 mx-4" />}
+              <SortablePlayerRow
+                player={player}
+                session={session}
+                map={map}
+                wheels={wheels}
+                cellConfig={cellConfig}
+                selectedPlayerId={selectedPlayerId}
+                onSelectPlayer={onSelectPlayer}
+                onAdjustGold={onAdjustGold}
+                onSetHp={onSetHp}
+                onAdjustMaxHp={onAdjustMaxHp}
+                onOpenWheelOverlay={onOpenWheelOverlay}
+                onEndTurn={onEndTurn}
+                onSkipTurn={onSkipTurn}
+                onClearSkip={onClearSkip}
+              />
+            </div>
+          ))}
+        </SortableContext>
+      </DndContext>
+      <AddPlayerRow onAdd={onAddPlayer} />
+    </>
   )
 }

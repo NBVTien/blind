@@ -242,6 +242,28 @@ export function ActionsTab({
         )}
       </div>
 
+      {/* ── HP ─────────────────────────────────────────────── */}
+      <div className={sectionClass}>
+        <p className={labelClass}>HP</p>
+        <div className={rowClass}>
+          <Button size="sm" variant="outline" disabled={!selectedPlayer || gmAction.isPending}
+            onClick={() => run('ADJUST_HP', { playerId: selectedPlayer, amount: 1 })}
+            className="text-xs font-display tracking-widest">
+            <Heart className="w-3 h-3 mr-1" />+1 HP
+          </Button>
+          <Button size="sm" variant="outline" disabled={!selectedPlayer || gmAction.isPending}
+            onClick={() => run('ADJUST_HP', { playerId: selectedPlayer, amount: -1 })}
+            className="text-xs font-display tracking-widest border-accent/40 text-accent hover:bg-accent/10">
+            <Heart className="w-3 h-3 mr-1" />−1 HP
+          </Button>
+          <Button size="sm" variant="outline" disabled={!selectedPlayer || gmAction.isPending}
+            onClick={() => run('SET_PLAYER_HP', { playerId: selectedPlayer, hp: currentPlayer?.maxHp ?? 3 })}
+            className="text-xs font-display tracking-widest">
+            Full Heal
+          </Button>
+        </div>
+      </div>
+
       {/* ── Reveal ────────────────────────────────────────── */}
       <div className={sectionClass}>
         <p className={labelClass}>Reveal</p>

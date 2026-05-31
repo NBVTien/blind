@@ -11,7 +11,7 @@ export function PlayerPickerPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-dvh bg-background flex items-center justify-center">
         <p className="text-muted-foreground tracking-widest uppercase text-sm">Loading…</p>
       </div>
     )
@@ -19,14 +19,14 @@ export function PlayerPickerPage() {
 
   if (isError || !session) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="h-dvh bg-background flex items-center justify-center">
         <p className="text-muted-foreground tracking-widest uppercase text-sm">Session not found</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
+    <div className="h-dvh bg-background flex flex-col items-center justify-center px-6 py-12">
       <button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
